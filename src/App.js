@@ -3,21 +3,29 @@ import React, { useState } from 'react';
 import VideoStats from './components/VideoStats';
 
 const App = () => {
-  const [title, setTitle] = useState('');
-  const [videoData, setVideoData] = useState(null);
+  const [titles, setTitles] = useState([]);
+  const [inputTitle, setInputTitle] = useState('');
   const [error, setError] = useState('');
-  const [timestamp, setTimestamp] = useState(Date.now()); // 추가된 상태
+  const [timestamp, setTimestamp] = useState(Date.now());
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      setVideoData(title);
-      setTimestamp(Date.now());
+      if (inputTitle) {
+        setTitles([...titles, inputTitle]);
+        setInputTitle('');
+        setTimestamp(Date.now());
+      }
     } catch (err) {
-      setError('Error fetching video data');
-      console.error('Error fetching video data:', err.message);
+      setError('영상 데이터를 가져오는 중 오류 발생');
+      console.error('영상 데이터를 가져오는 중 오류 발생:', err.message);
     }
+  };
+
+  const handleRemoveTitle = (title) => {
+    setTitles(titles.filter(t => t !== title));
+    setTimestamp(Date.now());
   };
 
   return (
@@ -27,14 +35,23 @@ const App = () => {
         <form onSubmit={handleSubmit}>
           <input
             type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={inputTitle}
+            onChange={(e) => setInputTitle(e.target.value)}
             placeholder="Enter YouTube Video Title"
           />
           <button type="submit">Get Stats</button>
         </form>
         {error && <p>{error}</p>}
-        {videoData && <VideoStats key={timestamp} title={videoData} />}
+        <div>
+          {titles.map((title, index) => (
+            <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+              <p>{title}</p>
+              <button onClick={() => handleRemoveTitle(title)}>X</button>
+            </div>
+          ))}
+        </div>
+
+        {titles.length > 0 && <VideoStats key={timestamp} titles={titles} />}
       </header>
     </div>
   );

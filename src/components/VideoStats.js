@@ -4,45 +4,45 @@ import axios from 'axios';
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
 
-const VideoStats = ({ title }) => {
-  const [videoData, setVideoData] = useState(null);
+const VideoStats = ({ titles }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        const baseURL = process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : ''; // 프로덕션에서는 빈 문자열로 설정하여 상대 경로 사용
-        const encodedTitle = encodeURIComponent(title);
-        const response = await axios.get(`${baseURL}/api/video/${encodedTitle}`);
-        setVideoData(response.data);
+        const baseURL = 'https://port-0-ytbcrawl-backend-lyix9okya7654eb7.sel5.cloudtype.app'; // 프로덕션에서는 빈 문자열로 설정하여 상대 경로 사용
+        const responses = await Promise.allSettled(titles.map(title =>
+          axios.get(`${baseURL}/api/video/${encodeURIComponent(title)}`).catch(err => ({ error: err }))
+        ));
+        const successResponses = responses.filter(response => response.status === 'fulfilled' && !response.value.error).map(response => response.value.data);
+        // const stats = responses.map(response => response.data);
+
+        const formattedData = {
+          labels: successResponses[0]?.stats.map(stat => new Date(stat.date).toLocaleDateString()) || [], // 타임스탬프 배열
+          datasets: successResponses.map((stat, index) => ({
+            label: stat.title,
+            data: stat.stats.map(view => view.viewCount),
+            borderColor: `hsl(${index * 60}, 100%, 50%)`,
+            fill: false,
+          }))
+        };
+
+        setData(formattedData);
       } catch (error) {
         console.error('Error fetching video data:', error.message);
       }
+      setLoading(false);
     };
-
     fetchData();
-  }, [title]);
+  }, [titles]);
 
-  if (!videoData) {
-    return <div>Loading...</div>;
-  }
-
-  const chartData = {
-    labels: videoData.stats.map((stat) => new Date(stat.date).toLocaleDateString()),
-    datasets: [
-      {
-        label: 'View Count',
-        data: videoData.stats.map((stat) => stat.viewCount),
-        borderColor: 'rgba(75, 192, 192, 1)',
-        borderWidth: 1,
-        fill: false,
-      },
-    ],
-  };
+  if(loading) return <p>로딩 중...</p>;
 
   return (
     <div>
-      <h2>{videoData.title}</h2>
-      <Line data={chartData} />
+      <Line data={data} />
     </div>
   );
 };
